@@ -1,12 +1,13 @@
 """
 Supervised Model Training Script
 =================================
-Trains and evaluates three supervised machine learning models:
+Trains and evaluates four supervised machine learning models:
 1. Logistic Regression
 2. Random Forest Classifier
 3. Gradient Boosting Classifier
+4. XGBoost Classifier
 
-Uses Isolation Forest predictions as labels for supervised learning.
+Uses rule-based labeling: Temperature > 100°C = Fault (1), else Normal (0)
 
 Author: Advanced Computer Programming Course
 """
@@ -15,6 +16,7 @@ import pandas as pd
 import numpy as np
 from sklearn.linear_model import LogisticRegression
 from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier
+from xgboost import XGBClassifier
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score, classification_report, confusion_matrix
 import joblib
@@ -27,7 +29,7 @@ from src.config import STANDARDIZED_DATA_PATH, MODELS_DIR, RANDOM_STATE
 
 
 def load_data_with_labels():
-    """Load standardized data and generate labels using Isolation Forest."""
+    """Load standardized data and generate labels using rule-based approach."""
     print("="*70)
     print("SUPERVISED MODEL TRAINING")
     print("="*70)
@@ -42,36 +44,22 @@ def load_data_with_labels():
         print("    → Run the data pipeline first")
         sys.exit(1)
     
-    print("\n[2] Generating labels using Isolation Forest predictions...")
+    print("\n[2] Generating labels using rule-based approach...")
+    print("    • Rule: Temperature > 100°C = Fault (1)")
+    print("    •       Temperature ≤ 100°C = Normal (0)")
     
-    # Load the trained Isolation Forest model
-    model_path = os.path.join(MODELS_DIR, 'isolation_forest_model.pkl')
-    try:
-        iso_forest = joblib.load(model_path)
-        print(f"    ✓ Loaded Isolation Forest model")
-        
-        # Generate predictions (-1 for anomaly, 1 for normal)
-        X = df[['Value_Standardized']].values
-        predictions = iso_forest.predict(X)
-        
-        # Convert to binary labels (0 for normal, 1 for anomaly)
-        # IF outputs: 1=normal, -1=anomaly
-        # We convert to: 0=normal, 1=anomaly
-        labels = (predictions == -1).astype(int)
-        
-        df['Label'] = labels
-        
-        n_normal = np.sum(labels == 0)
-        n_anomaly = np.sum(labels == 1)
-        
-        print(f"    ✓ Labels generated")
-        print(f"      - Normal (0):  {n_normal:,} ({n_normal/len(labels)*100:.2f}%)")
-        print(f"      - Anomaly (1): {n_anomaly:,} ({n_anomaly/len(labels)*100:.2f}%)")
-        
-    except FileNotFoundError:
-        print(f"    ✗ Error: Isolation Forest model not found")
-        print("    → Run train_model.py first")
-        sys.exit(1)
+    # Generate labels based on simple rule
+    # Value > 100°C = Fault (1), else Normal (0)
+    labels = (df['Value'] > 100).astype(int)
+    
+    df['Label'] = labels
+    
+    n_normal = np.sum(labels == 0)
+    n_anomaly = np.sum(labels == 1)
+    
+    print(f"    ✓ Labels generated")
+    print(f"      - Normal (0):  {n_normal:,} ({n_normal/len(labels)*100:.2f}%)")
+    print(f"      - Fault (1):   {n_anomaly:,} ({n_anomaly/len(labels)*100:.2f}%)")
     
     return df
 
@@ -189,6 +177,37 @@ def train_gradient_boosting(X_train, y_train, X_test, y_test):
     return model, y_pred, accuracy
 
 
+def train_xgboost(X_train, y_train, X_test, y_test):
+    """Train and evaluate XGBoost Classifier."""
+    print("\n" + "="*70)
+    print("MODEL 4: XGBOOST CLASSIFIER")
+    print("="*70)
+    
+    print("\n[4.4] Training XGBoost...")
+    model = XGBClassifier(
+        n_estimators=100,
+        random_state=RANDOM_STATE,
+        learning_rate=0.1,
+        max_depth=3,
+        min_child_weight=1,
+        eval_metric='logloss',
+        use_label_encoder=False
+    )
+    
+    model.fit(X_train, y_train)
+    print("    ✓ Training complete")
+    
+    # Make predictions
+    y_pred = model.predict(X_test)
+    
+    # Calculate metrics
+    accuracy = accuracy_score(y_test, y_pred)
+    
+    print(f"\n    Accuracy: {accuracy:.4f} ({accuracy*100:.2f}%)")
+    
+    return model, y_pred, accuracy
+
+
 def evaluate_model(model_name, y_test, y_pred):
     """Evaluate a single model with detailed metrics."""
     print(f"\n{'-'*70}")
@@ -243,7 +262,7 @@ def print_comparison_table(results):
     return best_model
 
 
-def save_models(lr_model, rf_model, gb_model):
+def save_models(lr_model, rf_model, gb_model, xgb_model):
     """Save trained models."""
     print("\n" + "="*70)
     print("SAVING MODELS")
@@ -258,7 +277,8 @@ def save_models(lr_model, rf_model, gb_model):
     models_to_save = {
         'logistic_regression_model.pkl': lr_model,
         'random_forest_model.pkl': rf_model,
-        'gradient_boosting_model.pkl': gb_model
+        'gradient_boosting_model.pkl': gb_model,
+        'xgboost_model.pkl': xgb_model
     }
     
     for filename, model in models_to_save.items():
@@ -291,6 +311,9 @@ def main():
     # Model 3: Gradient Boosting
     gb_model, gb_pred, gb_acc = train_gradient_boosting(X_train, y_train, X_test, y_test)
     
+    # Model 4: XGBoost
+    xgb_model, xgb_pred, xgb_acc = train_xgboost(X_train, y_train, X_test, y_test)
+    
     # Detailed evaluation
     print("\n" + "="*70)
     print("DETAILED MODEL EVALUATION")
@@ -299,13 +322,14 @@ def main():
     lr_cm = evaluate_model("Logistic Regression", y_test, lr_pred)
     rf_cm = evaluate_model("Random Forest Classifier", y_test, rf_pred)
     gb_cm = evaluate_model("Gradient Boosting Classifier", y_test, gb_pred)
+    xgb_cm = evaluate_model("XGBoost Classifier", y_test, xgb_pred)
     
     # Calculate precision and recall for comparison
     def calc_metrics(cm):
         """Calculate precision and recall from confusion matrix."""
-        # cm[1,1] = True Positives (anomalies correctly identified)
-        # cm[0,1] = False Positives (normal incorrectly labeled as anomaly)
-        # cm[1,0] = False Negatives (anomalies incorrectly labeled as normal)
+        # cm[1,1] = True Positives (faults correctly identified)
+        # cm[0,1] = False Positives (normal incorrectly labeled as fault)
+        # cm[1,0] = False Negatives (faults incorrectly labeled as normal)
         
         precision = cm[1,1] / (cm[1,1] + cm[0,1]) if (cm[1,1] + cm[0,1]) > 0 else 0
         recall = cm[1,1] / (cm[1,1] + cm[1,0]) if (cm[1,1] + cm[1,0]) > 0 else 0
@@ -314,6 +338,7 @@ def main():
     lr_prec, lr_rec = calc_metrics(lr_cm)
     rf_prec, rf_rec = calc_metrics(rf_cm)
     gb_prec, gb_rec = calc_metrics(gb_cm)
+    xgb_prec, xgb_rec = calc_metrics(xgb_cm)
     
     # Comparison table
     results = {
@@ -331,24 +356,29 @@ def main():
             'accuracy': gb_acc,
             'precision': gb_prec,
             'recall': gb_rec
+        },
+        'XGBoost Classifier': {
+            'accuracy': xgb_acc,
+            'precision': xgb_prec,
+            'recall': xgb_rec
         }
     }
     
     best_model = print_comparison_table(results)
     
     # Save models
-    save_models(lr_model, rf_model, gb_model)
+    save_models(lr_model, rf_model, gb_model, xgb_model)
     
     # Summary
     print("\n" + "="*70)
     print("TRAINING COMPLETE")
     print("="*70)
-    print("\n✓ All three supervised models trained successfully")
+    print("\n✓ All four supervised models trained successfully")
     print("✓ Models saved to:", MODELS_DIR)
     print(f"\nBest performing model: {best_model}")
     print("\nNext Steps:")
     print("  → Use these models for real-time fault detection")
-    print("  → Compare with Isolation Forest (unsupervised) approach")
+    print("  → Deploy the best model in production API")
     print("="*70)
 
 

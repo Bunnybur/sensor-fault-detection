@@ -1,7 +1,7 @@
 """
 Example: Using the Trained Supervised Models
 =============================================
-This script demonstrates how to use the three trained supervised models
+This script demonstrates how to use the four trained supervised models
 for making predictions on new sensor data.
 
 Author: Advanced Computer Programming Course
@@ -25,7 +25,7 @@ def load_models():
         'Logistic Regression': joblib.load(os.path.join(MODELS_DIR, 'logistic_regression_model.pkl')),
         'Random Forest': joblib.load(os.path.join(MODELS_DIR, 'random_forest_model.pkl')),
         'Gradient Boosting': joblib.load(os.path.join(MODELS_DIR, 'gradient_boosting_model.pkl')),
-        'Isolation Forest': joblib.load(os.path.join(MODELS_DIR, 'isolation_forest_model.pkl'))
+        'XGBoost': joblib.load(os.path.join(MODELS_DIR, 'xgboost_model.pkl'))
     }
     
     scaler = joblib.load(os.path.join(MODELS_DIR, 'standard_scaler.pkl'))
@@ -50,15 +50,9 @@ def predict_with_all_models(sensor_value, models, scaler):
         # Make prediction
         prediction = model.predict(value_scaled)[0]
         
-        # Format output based on model type
-        if model_name == 'Isolation Forest':
-            # Isolation Forest outputs: 1 = normal, -1 = anomaly
-            status = "✓ Normal" if prediction == 1 else "⚠️ FAULT"
-            pred_label = "Normal" if prediction == 1 else "Anomaly"
-        else:
-            # Supervised models output: 0 = normal, 1 = anomaly
-            status = "✓ Normal" if prediction == 0 else "⚠️ FAULT"
-            pred_label = "Normal" if prediction == 0 else "Anomaly"
+        # All supervised models output: 0 = normal, 1 = fault
+        status = "✓ Normal" if prediction == 0 else "⚠️ FAULT"
+        pred_label = "Normal" if prediction == 0 else "Fault"
         
         print(f"{model_name:<25} {pred_label:<15} {status:<20}")
     
@@ -95,11 +89,11 @@ def main():
     print("DEMO COMPLETE")
     print("="*70)
     print("\n📊 Observations:")
-    print("  • Random Forest and Gradient Boosting perform identically")
-    print("  • Both supervised models show 100% agreement")
-    print("  • Isolation Forest (unsupervised) may differ slightly")
-    print("  • Logistic Regression fails to detect anomalies properly")
-    print("\n💡 Recommendation: Use Random Forest for production")
+    print("  • All models use rule-based labels (Temperature > 100°C = Fault)")
+    print("  • Random Forest, Gradient Boosting, and XGBoost show excellent performance")
+    print("  • Logistic Regression may struggle with non-linear decision boundaries")
+    print("  • XGBoost often provides best balance of accuracy and speed")
+    print("\n💡 Recommendation: Use XGBoost or Random Forest for production")
     print("="*70)
 
 
