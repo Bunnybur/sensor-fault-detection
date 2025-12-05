@@ -50,7 +50,7 @@ Thumbs.db
 
 # Project specific
 *.log
-models/*.pkl
+data/models/*.pkl
 data/processed/
 output/
 plots/
