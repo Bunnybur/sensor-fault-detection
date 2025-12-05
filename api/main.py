@@ -202,8 +202,10 @@ def standardize_value(value: float, scaler=None) -> float:
 
 
 
-isolation_forest_model = load_model()
-standard_scaler = load_scaler()
+
+
+model = load_model()
+scaler = load_scaler()
 
 
 
@@ -224,9 +226,9 @@ async def root():
 async def health_check():
 
     return {
-        "status": "healthy" if isolation_forest_model is not None else "degraded",
-        "model_loaded": isolation_forest_model is not None,
-        "scaler_loaded": standard_scaler is not None,
+        "status": "healthy" if model is not None else "degraded",
+        "model_loaded": model is not None,
+        "scaler_loaded": scaler is not None,
         "total_records": len(sensor_records_db),
         "timestamp": datetime.utcnow().isoformat()
     }
@@ -312,23 +314,23 @@ async def delete_record(record_id: int):
 async def predict_anomaly(request: PredictionRequest):
 
 
-    if isolation_forest_model is None:
+    if model is None:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="Model is not loaded. Please train the model first."
         )
 
 
-    standardized_value = standardize_value(request.value, standard_scaler)
+    standardized_value = standardize_value(request.value, scaler)
 
 
     input_features = np.array([[standardized_value]])
 
 
-    prediction_raw = isolation_forest_model.predict(input_features)[0]
+    prediction_raw = model.predict(input_features)[0]
 
 
-    anomaly_score = isolation_forest_model.score_samples(input_features)[0]
+    anomaly_score = model.score_samples(input_features)[0]
 
 
     anomaly_label = 1 if prediction_raw == -1 else 0
@@ -372,7 +374,7 @@ async def predict_anomaly(request: PredictionRequest):
 @app.post("/predict/batch", response_model=List[PredictionResponse], tags=["ML Predictions"])
 async def predict_anomaly_batch(requests: List[PredictionRequest]):
 
-    if isolation_forest_model is None:
+    if model is None:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="Model is not loaded. Please train the model first."
@@ -426,8 +428,8 @@ if __name__ == "__main__":
     print(f"\n🚀 Starting FastAPI server...")
     print(f"📍 API Documentation: http://localhost:8000/docs")
     print(f"📍 Alternative Docs: http://localhost:8000/redoc")
-    print(f"💾 Model loaded: {isolation_forest_model is not None}")
-    print(f"📊 Scaler loaded: {standard_scaler is not None}")
+    print(f"💾 Model loaded: {model is not None}")
+    print(f"📊 Scaler loaded: {scaler is not None}")
     print(f"📝 Total records: {len(sensor_records_db)}")
     print("="*70 + "\n")
 
