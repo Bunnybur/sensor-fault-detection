@@ -7,24 +7,23 @@ import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from src.config import STANDARDIZED_DATA_PATH
 
-def load_standardized_data():
+def load_cleaned_data():
 
     print("="*70)
     print("STEP 3: DATA ANALYSIS & VISUALIZATION")
     print("="*70)
 
-    print("\n[3.1] Loading standardized data...")
+    print("\n[3.1] Loading cleaned data...")
     try:
-        df = pd.read_csv(STANDARDIZED_DATA_PATH)
+        df = pd.read_csv(CLEANED_DATA_PATH)
         df['Timestamp'] = pd.to_datetime(df['Timestamp'])
         print(f"    ✓ Loaded {len(df):,} records")
         print(f"    ✓ Date range: {df['Timestamp'].min()} to {df['Timestamp'].max()}")
         return df
     except FileNotFoundError:
-        print(f"    ✗ Error: Standardized data not found")
+        print(f"    ✗ Error: Cleaned data not found")
         print("    → Run the data pipeline first:")
-        print("       1. python src/data_clean.py")
-        print("       2. python src/data_standardization.py")
+        print("       1. python src/1_clean_data.py")
         sys.exit(1)
 
 def statistical_analysis(df):
@@ -80,7 +79,7 @@ def visualize_time_series(df, outliers_iqr, extreme_faults):
     print("="*70)
     print("\n[3.6] Generating time series plots...")
 
-    fig, axes = plt.subplots(3, 1, figsize=(15, 12))
+    fig, axes = plt.subplots(2, 1, figsize=(15, 10))
     fig.suptitle('PT100 Temperature Sensor - Comprehensive Analysis', 
                  fontsize=16, fontweight='bold')
 
@@ -114,23 +113,11 @@ def visualize_time_series(df, outliers_iqr, extreme_faults):
                    color='orange', s=30, alpha=0.8, label='Outliers', zorder=4)
 
     ax2.set_ylabel('Temperature (°C)', fontsize=10)
+    ax2.set_xlabel('Timestamp', fontsize=10)
     ax2.set_title('Normal Operating Range (Zoomed View)', fontsize=11, pad=10)
     ax2.legend(loc='upper right')
     ax2.grid(True, alpha=0.3)
     ax2.set_ylim([0, 60])
-
-    ax3 = axes[2]
-    ax3.plot(df['Timestamp'], df['Value_Standardized'],
-             linewidth=0.8, color='purple', alpha=0.7, label='Standardized Values')
-    ax3.axhline(y=0, color='black', linestyle='--', linewidth=1, alpha=0.5, label='Mean (0)')
-    ax3.axhline(y=3, color='red', linestyle=':', linewidth=1, alpha=0.5, label='+3σ')
-    ax3.axhline(y=-3, color='red', linestyle=':', linewidth=1, alpha=0.5, label='-3σ')
-
-    ax3.set_ylabel('Standardized Value (z-score)', fontsize=10)
-    ax3.set_xlabel('Timestamp', fontsize=10)
-    ax3.set_title('Standardized Values (After Scaling)', fontsize=11, pad=10)
-    ax3.legend(loc='upper right')
-    ax3.grid(True, alpha=0.3)
 
     plt.tight_layout()
     print("    ✓ Plots generated successfully")
@@ -139,7 +126,7 @@ def visualize_time_series(df, outliers_iqr, extreme_faults):
 
 def main():
 
-    df = load_standardized_data()
+    df = load_cleaned_data()
 
     outliers_iqr, extreme_faults = statistical_analysis(df)
 

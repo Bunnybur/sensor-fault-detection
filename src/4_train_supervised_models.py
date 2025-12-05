@@ -97,10 +97,12 @@ def train_logistic_regression(X_train, y_train, X_test, y_test):
 
 
     accuracy = accuracy_score(y_test, y_pred)
+    f1 = f1_score(y_test, y_pred)
 
     print(f"\n    Accuracy: {accuracy:.4f} ({accuracy*100:.2f}%)")
+    print(f"    F1 Score: {f1:.4f}")
 
-    return model, y_pred, accuracy
+    return model, y_pred, accuracy, f1
 
 
 def train_random_forest(X_train, y_train, X_test, y_test):
@@ -127,10 +129,12 @@ def train_random_forest(X_train, y_train, X_test, y_test):
 
 
     accuracy = accuracy_score(y_test, y_pred)
+    f1 = f1_score(y_test, y_pred)
 
     print(f"\n    Accuracy: {accuracy:.4f} ({accuracy*100:.2f}%)")
+    print(f"    F1 Score: {f1:.4f}")
 
-    return model, y_pred, accuracy
+    return model, y_pred, accuracy, f1
 
 
 def train_gradient_boosting(X_train, y_train, X_test, y_test):
@@ -157,10 +161,12 @@ def train_gradient_boosting(X_train, y_train, X_test, y_test):
 
 
     accuracy = accuracy_score(y_test, y_pred)
+    f1 = f1_score(y_test, y_pred)
 
     print(f"\n    Accuracy: {accuracy:.4f} ({accuracy*100:.2f}%)")
+    print(f"    F1 Score: {f1:.4f}")
 
-    return model, y_pred, accuracy
+    return model, y_pred, accuracy, f1
 
 
 def train_xgboost(X_train, y_train, X_test, y_test):
@@ -188,10 +194,12 @@ def train_xgboost(X_train, y_train, X_test, y_test):
 
 
     accuracy = accuracy_score(y_test, y_pred)
+    f1 = f1_score(y_test, y_pred)
 
     print(f"\n    Accuracy: {accuracy:.4f} ({accuracy*100:.2f}%)")
+    print(f"    F1 Score: {f1:.4f}")
 
-    return model, y_pred, accuracy
+    return model, y_pred, accuracy, f1
 
 
 def evaluate_model(model_name, y_test, y_pred):
@@ -222,28 +230,28 @@ def print_comparison_table(results):
     print("="*70)
 
     print("\n{:<30} {:>12} {:>12} {:>12}".format(
-        "Model", "Accuracy", "Precision", "Recall"
+        "Model", "Accuracy", "F1 Score", "Recall"
     ))
     print("-" * 70)
 
     best_model = None
-    best_accuracy = 0
+    best_f1 = 0
 
     for model_name, metrics in results.items():
         print("{:<30} {:>12.4f} {:>12.4f} {:>12.4f}".format(
             model_name,
             metrics['accuracy'],
-            metrics['precision'],
+            metrics['f1'],
             metrics['recall']
         ))
 
-        if metrics['accuracy'] > best_accuracy:
-            best_accuracy = metrics['accuracy']
+        if metrics['f1'] > best_f1:
+            best_f1 = metrics['f1']
             best_model = model_name
 
     print("="*70)
     print(f"\n🏆 BEST MODEL: {best_model}")
-    print(f"   Accuracy: {best_accuracy:.4f} ({best_accuracy*100:.2f}%)")
+    print(f"   F1 Score: {best_f1:.4f}")
 
     return best_model
 
@@ -289,16 +297,16 @@ def main():
     print("="*70)
 
 
-    lr_model, lr_pred, lr_acc = train_logistic_regression(X_train, y_train, X_test, y_test)
+    lr_model, lr_pred, lr_acc, lr_f1 = train_logistic_regression(X_train, y_train, X_test, y_test)
 
 
-    rf_model, rf_pred, rf_acc = train_random_forest(X_train, y_train, X_test, y_test)
+    rf_model, rf_pred, rf_acc, rf_f1 = train_random_forest(X_train, y_train, X_test, y_test)
 
 
-    gb_model, gb_pred, gb_acc = train_gradient_boosting(X_train, y_train, X_test, y_test)
+    gb_model, gb_pred, gb_acc, gb_f1 = train_gradient_boosting(X_train, y_train, X_test, y_test)
 
 
-    xgb_model, xgb_pred, xgb_acc = train_xgboost(X_train, y_train, X_test, y_test)
+    xgb_model, xgb_pred, xgb_acc, xgb_f1 = train_xgboost(X_train, y_train, X_test, y_test)
 
 
     print("\n" + "="*70)
@@ -316,7 +324,6 @@ def main():
 
 
 
-
         precision = cm[1,1] / (cm[1,1] + cm[0,1]) if (cm[1,1] + cm[0,1]) > 0 else 0
         recall = cm[1,1] / (cm[1,1] + cm[1,0]) if (cm[1,1] + cm[1,0]) > 0 else 0
         return precision, recall
@@ -330,21 +337,25 @@ def main():
     results = {
         'Logistic Regression': {
             'accuracy': lr_acc,
+            'f1': lr_f1,
             'precision': lr_prec,
             'recall': lr_rec
         },
         'Random Forest Classifier': {
             'accuracy': rf_acc,
+            'f1': rf_f1,
             'precision': rf_prec,
             'recall': rf_rec
         },
         'Gradient Boosting Classifier': {
             'accuracy': gb_acc,
+            'f1': gb_f1,
             'precision': gb_prec,
             'recall': gb_rec
         },
         'XGBoost Classifier': {
             'accuracy': xgb_acc,
+            'f1': xgb_f1,
             'precision': xgb_prec,
             'recall': xgb_rec
         }
@@ -356,35 +367,16 @@ def main():
     save_models(lr_model, rf_model, gb_model, xgb_model)
 
 
-    print(f"\n[6] Copying best model to API path...")
-    model_mapping = {
-        'Logistic Regression': lr_model,
-        'Random Forest Classifier': rf_model,
-        'Gradient Boosting Classifier': gb_model,
-        'XGBoost Classifier': xgb_model
-    }
-
-    best_model_obj = model_mapping.get(best_model)
-    if best_model_obj:
-        from src.config import MODEL_PATH
-        joblib.dump(best_model_obj, MODEL_PATH)
-        file_size = os.path.getsize(MODEL_PATH) / 1024
-        print(f"    ✓ Best model copied to MODEL_PATH")
-        print(f"      Model: {best_model}")
-        print(f"      Path: {MODEL_PATH}")
-        print(f"      Size: {file_size:.2f} KB")
-        print(f"    → FastAPI will now load: {best_model}")
-
-
     print("\n" + "="*70)
     print("TRAINING COMPLETE")
     print("="*70)
     print("\n✓ All four supervised models trained successfully")
     print("✓ Models saved to:", MODELS_DIR)
-    print(f"\nBest performing model: {best_model}")
+    print(f"\nBest performing model (by F1 score): {best_model}")
     print("\nNext Steps:")
-    print("  → Start FastAPI to use the best model automatically")
-    print("  → Run 'python src/main.py' to start the API server")
+    print("  → Train Isolation Forest: python src/5_train_isolation_forest.py")
+    print("  → Train Autoencoder: python src/6_train_autoencoder.py")
+    print("  → Compare all models: python src/7_compare_models.py")
     print("="*70)
 
 
