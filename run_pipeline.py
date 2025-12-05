@@ -1,31 +1,17 @@
-"""
-Pipeline Execution Script
-=========================
-Runs the complete data processing pipeline in order.
-
-Steps:
-1. Data cleaning (drop SensorId, handle nulls)
-2. Data standardization (StandardScaler)
-3. Data analysis (visualizations)
-4-6. Model training (Supervised ML + Isolation Forest + Autoencoder)
-
-Usage: python run_pipeline.py [--skip-viz]
-"""
-
 import subprocess
 import sys
 import os
 
 def run_step(step_name, script_path, skip=False):
-    """Run a pipeline step."""
+
     if skip:
         print(f"\n⏭️  Skipping: {step_name}")
         return True
-    
+
     print(f"\n{'='*70}")
     print(f"Running: {step_name}")
     print(f"{'='*70}\n")
-    
+
     try:
         result = subprocess.run(
             [sys.executable, script_path],
@@ -39,17 +25,17 @@ def run_step(step_name, script_path, skip=False):
         return False
 
 def main():
-    """Run the complete pipeline."""
+
     skip_viz = '--skip-viz' in sys.argv
-    
+
     print("""
 ╔══════════════════════════════════════════════════════════════════╗
 ║        SENSOR FAULT DETECTION - DATA PIPELINE                    ║
 ║        Advanced Computer Programming Course                      ║
 ╚══════════════════════════════════════════════════════════════════╝
     """)
-    
-    # Pipeline steps
+
+
     steps = [
         ("Step 1: Data Cleaning", "src/1_clean_data.py", False),
         ("Step 2: Data Standardization", "src/2_standardize_dataset.py", False),
@@ -58,15 +44,15 @@ def main():
         ("Step 5: Train Isolation Forest", "src/5_train_isolation_forest.py", False),
         ("Step 6: Train Autoencoder", "src/6_train_autoencoder.py", False),
     ]
-    
-    # Run each step
+
+
     for step_name, script_path, skip in steps:
         success = run_step(step_name, script_path, skip)
         if not success:
             print(f"\n❌ Pipeline failed at: {step_name}")
             sys.exit(1)
-    
-    # Success message
+
+
     print(f"\n{'='*70}")
     print("🎉 PIPELINE COMPLETE!")
     print(f"{'='*70}\n")
