@@ -329,29 +329,49 @@ async def predict_anomaly(request: PredictionRequest):
 
     prediction_raw = model.predict(input_features)[0]
 
-
-    anomaly_score = model.score_samples(input_features)[0]
-
-
-    anomaly_label = 1 if prediction_raw == -1 else 0
+    
+    if hasattr(model, 'score_samples'):
+        anomaly_score = model.score_samples(input_features)[0]
+        anomaly_label = 1 if prediction_raw == -1 else 0
+    elif hasattr(model, 'predict_proba'):
+        proba = model.predict_proba(input_features)[0]
+        anomaly_score = float(proba[1])
+        anomaly_label = int(prediction_raw)
+    else:
+        anomaly_label = int(prediction_raw)
+        anomaly_score = 1.0 if anomaly_label == 1 else 0.0
 
 
     if anomaly_label == 1:
-
-        if anomaly_score < -0.65:
-            confidence = "High"
-        elif anomaly_score < -0.55:
-            confidence = "Medium"
+        if hasattr(model, 'score_samples'):
+            if anomaly_score < -0.65:
+                confidence = "High"
+            elif anomaly_score < -0.55:
+                confidence = "Medium"
+            else:
+                confidence = "Low"
         else:
-            confidence = "Low"
+            if anomaly_score > 0.8:
+                confidence = "High"
+            elif anomaly_score > 0.6:
+                confidence = "Medium"
+            else:
+                confidence = "Low"
     else:
-
-        if anomaly_score > -0.45:
-            confidence = "High"
-        elif anomaly_score > -0.50:
-            confidence = "Medium"
+        if hasattr(model, 'score_samples'):
+            if anomaly_score > -0.45:
+                confidence = "High"
+            elif anomaly_score > -0.50:
+                confidence = "Medium"
+            else:
+                confidence = "Low"
         else:
-            confidence = "Low"
+            if anomaly_score < 0.2:
+                confidence = "High"
+            elif anomaly_score < 0.4:
+                confidence = "Medium"
+            else:
+                confidence = "Low"
 
 
     prediction_text = "ANOMALY" if anomaly_label == 1 else "NORMAL"
